@@ -49,29 +49,34 @@
 
     let posx = 0;
     let posy = 0;
-
-    let columns = new Array();
-    let targtsPos = new Array();
+    
+    let slotColumns = [];    
     for (let i = 0; i < 5; i++) 
     {
-        posx = startPosX + i * dimension;
-        let column = new Array();
-        let targtPos = new Array();
+        posx = startPosX + i * dimension;                                
+        let slotColumn = [];     
         for(let j = 0; j < 4; j++)
-        {
-            posy = startPosY + j * dimension;
+        {            
+            posy = startPosY + j * dimension;            
             const slotImg = new PIXI.Sprite(slotTextures[Math.floor(Math.random() * slotTextures.length)]);
             slotImg.anchor.set(0.5);
             slotImg.x = posx;
             slotImg.y = posy;             
             let slotContainer = new PIXI.Container();
             slotContainer.addChild(slotImg);
-            container.addChild(slotContainer);
-            column[j] = slotContainer;   
-            targtPos[j] = slotContainer.position.y + dimension;
-        }        
-        columns[i] = column;
-        targtsPos[i] = targtPos;
+            container.addChild(slotContainer);            
+            
+            let slotData = 
+            {
+                container: slotContainer,
+                symbol: slotImg,
+                position: slotContainer.position,
+                targetPos: slotContainer.position.y + dimension,                
+            };
+
+            slotColumn.push(slotData);
+        }
+        slotColumns.push(slotColumn);
     }
 
     const margin = (app.screen.height - dimension * 3) / 2;
@@ -110,56 +115,73 @@
         return a1 * (1 - t) + a2 * t;
     }
 
-    let tweening = false;
-    // Function to start playing.
-    function startPlay() 
-    {        
-        tweening = true;
-    }
-
-        
+    let tweening = false; 
     let t = 0; 
     let columnIndex = 0;
-    let currentColumn = columns[columnIndex];
-    let currentTargetPos = targtsPos[columnIndex];
+    let currentColumn = slotColumns[columnIndex];  
+    let lastImgIndex = 4;
+
+    function startPlay() 
+    {        
+        t = 0; 
+        columnIndex = 0;
+        currentColumn = slotColumns[columnIndex]; 
+
+        lastImgIndex--;
+        if(lastImgIndex < 0)
+            lastImgIndex = 3;
+
+        for(let i = 0; i < 5; i++)
+        {
+            for(let j = 0; j < 4; j++)
+            {
+                slotColumns[i][j].position = slotColumns[i][j].container.position;                
+                slotColumns[i][j].targetPos = slotColumns[i][j].position.y + dimension;
+            }
+        }
+        tweening = true;
+        bottom.interactive = false;
+    }
 
     app.ticker.add((delta) => 
     {
         if(tweening)    
         {   
-            t += Math.abs(1 - delta);
-            
+            t += Math.abs(1 - delta);            
             for(let j = 0; j < 4; j++)
             {                
-                var lepp = lerp(currentColumn[j].position.y, currentTargetPos[j], 15 * t)
+                var lepp = lerp(currentColumn[j].position.y, currentColumn[j].targetPos, 20 * t)
                 //console.log("++++++++++ delta " + delta + " pos: " + currentColumn[j].position.y + " +++ " + lepp);
-                var pos = currentColumn[j]['position'];
+                var pos = currentColumn[j].container['position'];
                 pos.y = lepp;
-                currentColumn[j]['position'] = pos;                       
+                currentColumn[j].container['position'] = pos;                       
             }                    
             
-            if(Math.abs(currentColumn[0].position.y - currentTargetPos[0]) < 0.1)
+            if(Math.abs(currentColumn[0].container['position'].y - currentColumn[0].targetPos) < 0.1)
             {                
                 columnTweenFinished();
-            }        
-            
+            }            
         }
     });    
-
+    
     function columnTweenFinished()
-    {        
+    {       
         if(columnIndex == 4)
         {
             console.log('columnTweenFinished');
-            tweening = false;   
-            return;
-
+            tweening = false;
+            bottom.interactive = true;                        
         }
-        currentColumn[0]['position'].y = currentTargetPos[0];
+
+        currentColumn[lastImgIndex].symbol.texture = slotTextures[Math.floor(Math.random() * slotTextures.length)];
+        var tmpPosY = currentColumn[lastImgIndex].container.position.y;
+        tmpPosY -= 4 * dimension;
+        currentColumn[lastImgIndex].container.position.y = tmpPosY;                                
+        
         columnIndex++;
-        currentColumn = columns[columnIndex];
-        currentTargetPos = targtsPos[columnIndex];             
-        t = 0;
+        currentColumn = slotColumns[columnIndex];                     
+        t = 0;      
+
     }
 
 </script>
